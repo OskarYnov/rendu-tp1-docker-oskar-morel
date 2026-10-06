@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  front-service:
+    build: ./front
+    ports:
+      - "8080:80"
+    environment:
+      - APP_NAME=MonCloudFront
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+  back-service:
+    build: ./back
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=localhost
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  gameserver-service:
+    build: ./gameserver
+    ports:
+      - "7777:7777"
+    environment:
+      - MAX_PLAYERS=16
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
