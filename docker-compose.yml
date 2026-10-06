@@ -1,38 +1,37 @@
 version: '3.8'
 
 services:
-  front-service:
-    build: ./front
+  proxy:
+    build: ./proxy
     ports:
       - "8080:80"
     environment:
-      - APP_NAME=MonCloudFront
+      - PROXY_MODE=production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 128M
+    depends_on:
+      - front
+      - back
+
+  front:
+    build: ./front
+    environment:
+      - APP_ENV=production
     deploy:
       resources:
         limits:
           cpus: '0.50'
           memory: 256M
 
-  back-service:
+  back:
     build: ./back
-    ports:
-      - "5000:5000"
     environment:
-      - DB_HOST=localhost
+      - DB_HOST=internal-db
     deploy:
       resources:
         limits:
           cpus: '1.0'
-          memory: 512M
-
-  gameserver-service:
-    build: ./gameserver
-    ports:
-      - "7777:7777"
-    environment:
-      - MAX_PLAYERS=16
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
+          memory: 512M  
