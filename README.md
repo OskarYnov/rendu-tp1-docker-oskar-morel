@@ -1,12 +1,11 @@
 # Projet TP Docker - Cloud Personnel Virtuel
-
 ## Presentation du Projet
 
-Ce projet consiste a concevoir un cloud personnel virtualise base sur Docker et Docker Compose, sans utiliser d'images pre-configurees du Docker Hub. L'architecture repose sur trois types de conteneurs personnalises :
+Ce projet consiste a concevoir une application web modulaire nommee **ManaCache** (gestionnaire de collection Magic: The Gathering) basee sur Docker et Docker Compose. L'architecture repose sur trois types de conteneurs personnalises :
 
-1. Un Reverse Proxy Nginx pour router le trafic.
+1. Un Reverse Proxy Nginx pour router le trafic (exposé sur le port 8080).
 2. Un Front-End Nginx pour l'interface web statique.
-3. Un Back-End Python pour l'API applicative.
+3. Un Back-End Python pour l'API et la gestion des données persistes.
 
 ---
 
@@ -44,6 +43,11 @@ Au moment du lancement via Docker Compose, chaque conteneur recoit des parametre
   * Front : Limite a `0.50` vCPU et `256` Mo de RAM.
   * Back : Limite a `1.0` vCPU et `512` Mo de RAM.
 * **Healthchecks :** Integration d'une verification automatique de l'etat de sante des services via `curl` a intervalle regulier.
+
+- **Persistance des données (Volumes Docker) :**
+  * Utilisation de deux volumes nommes (`mtg_data` et `mtg_images`) attaches au conteneur `back`.
+  * `mtg_data` garantit la conservation de la base de données (collection, decks) même en cas de suppression du conteneur.
+  * `mtg_images` permet de stocker en cache les visuels des cartes téléchargés depuis l'API externe pour optimiser les performances.
 
 ---
 

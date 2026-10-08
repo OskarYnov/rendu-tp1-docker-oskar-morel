@@ -15,6 +15,8 @@ services:
     depends_on:
       - front
       - back
+    networks:
+      - app-net
 
   front:
     build: ./front
@@ -25,13 +27,28 @@ services:
         limits:
           cpus: '0.50'
           memory: 256M
+    networks:
+      - app-net
 
   back:
     build: ./back
     environment:
-      - DB_HOST=internal-db
+      - STORAGE_TYPE=sqlite
+    volumes:
+      - mtg_data:/app/data
+      - mtg_images:/app/images
     deploy:
       resources:
         limits:
           cpus: '1.0'
           memory: 512M  
+    networks:
+      - app-net
+
+volumes:
+  mtg_data:
+  mtg_images:
+
+networks:
+  app-net:
+    driver: bridge

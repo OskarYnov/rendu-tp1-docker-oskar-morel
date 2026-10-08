@@ -1,4 +1,12 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import signal
+import sys
+
+def handle_exit(signum, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_exit)
+signal.signal(signal.SIGINT, handle_exit)
 
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
