@@ -4,9 +4,9 @@ services:
   proxy:
     build: ./proxy
     ports:
-      - "8080:80"
+      - "${PROXY_PORT}:80"
     environment:
-      - PROXY_MODE=production
+      - PROXY_MODE=${PROXY_MODE}
     deploy:
       resources:
         limits:
@@ -21,7 +21,7 @@ services:
   front:
     build: ./front
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV}
     deploy:
       resources:
         limits:
@@ -33,7 +33,7 @@ services:
   back:
     build: ./back
     environment:
-      - STORAGE_TYPE=sqlite
+      - STORAGE_TYPE=${STORAGE_TYPE}
     volumes:
       - mtg_data:/app/data
       - mtg_images:/app/images

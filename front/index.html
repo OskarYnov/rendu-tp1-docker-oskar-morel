@@ -1,18 +1,118 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
-    <title>Mon Cloud Docker - Front</title>
+    <title>ManaCache - Collection MTG</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f4f9; }
-        h1 { color: #2c3e50; }
-        .card { background: white; padding: 20px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+        }
+
+        .card {
+            background: #2c3e50;
+            padding: 25px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: #e67e22;
+            text-align: center;
+        }
+
+        input,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #e67e22;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #d35400;
+        }
+
+        .mtg-card {
+            background: #34495e;
+            padding: 10px;
+            margin-top: 10px;
+            border-left: 4px solid #e67e22;
+            border-radius: 4px;
+        }
     </style>
 </head>
+
 <body>
     <div class="card">
-        <h1>Bienvenue sur mon Cloud Docker !</h1>
-        <p>Ce conteneur Front (Nginx) est géré derrière un Reverse Proxy.</p>
+        <h1>ManaCache 🃏</h1>
+        <p style="text-align: center; font-size: 0.9em; color: #bdc3c7;">Architecture 3 Tiers Dockerisée</p>
+
+        <h3>Ma Collection :</h3>
+        <div id="card-list">Chargement des cartes...</div>
+
+        <hr style="border-color: #7f8c8d; margin: 20px 0;">
+
+        <h3>Ajouter une carte :</h3>
+        <input type="text" id="card-name" placeholder="Nom de la carte (ex: Shivan Dragon)">
+        <input type="text" id="card-edition" placeholder="Édition (ex: Beta)">
+        <button onclick="addCard()">Ajouter au coffre</button>
     </div>
+
+    <script>
+        // Fonction pour récupérer et afficher les cartes via l'API
+        async function loadCards() {
+            try {
+                // Le navigateur appelle l'API via le Reverse Proxy sur le même port 8080
+                const response = await fetch('/api/cards');
+                const cards = await response.json();
+
+                const list = document.getElementById('card-list');
+                list.innerHTML = cards.map(c =>
+                    `<div class="mtg-card"><b>${c.name}</b> <br><small>Édition: ${c.edition}</small></div>`
+                ).join('');
+            } catch (err) {
+                document.getElementById('card-list').innerHTML = "Erreur de connexion à l'API.";
+            }
+        }
+
+        // Fonction pour envoyer une nouvelle carte au Back-end
+        async function addCard() {
+            const name = document.getElementById('card-name').value;
+            const edition = document.getElementById('card-edition').value;
+
+            if (!name || !edition) return alert("Remplissez les deux champs !");
+
+            await fetch('/api/cards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, edition: edition })
+            });
+
+            // Vider les champs et recharger la liste
+            document.getElementById('card-name').value = '';
+            document.getElementById('card-edition').value = '';
+            loadCards();
+        }
+
+        // Charger les cartes au démarrage de la page
+        loadCards();
+    </script>
 </body>
+
 </html>

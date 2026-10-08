@@ -8,9 +8,10 @@ ENV ENVIRONMENT=${ENV}
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-RUN useradd -u 1000 appuser && chown -R appuser:appuser /app
+RUN useradd -u 1000 appuser \
+    && mkdir -p /app/data /app/images \
+    && chown -R appuser:appuser /app
 USER appuser
-
 COPY --chown=appuser:appuser app.py .
 
 EXPOSE 5000
