@@ -6,35 +6,17 @@ Ce projet consiste à concevoir une application web modulaire nommée **ManaCach
 
 ### Schéma de l'Architecture
 
-```text
-                 [ Réseau Externe / Hôte ]
-                            │
-                       Port 8080
-                            │
-               ┌────────────▼─────────────┐
-               │                          │
-               │   Reverse Proxy (Nginx)  │
-               │    (Routage & Sécurité)  │
-               │                          │
-               └──────┬────────────┬──────┘
-                      │            │
-             /--------/            \--------\  [ Réseau Interne Isolé : app-net ]
-             │                              │
-      Requêtes vers /                Requêtes vers /api
-             │                              │
-    ┌────────▼────────┐            ┌────────▼────────┐
-    │                 │            │                 │
-    │  Front (Nginx)  │            │  Back (Python)  │
-    │  (Fichiers UI)  │            │  (Logique API)  │
-    │                 │            │                 │
-    └─────────────────┘            └────────┬────────┘
-                                            │
-                                  /---------┴---------\
-                                  │                   │
-                        ┌─────────▼────────┐ ┌────────▼─────────┐
-                        │ Volume mtg_data  │ │Volume mtg_images │
-                        │  (JSON / SQLite) │ │ (Cache des scans)│
-                        └──────────────────┘ └──────────────────┘
+```mermaid
+flowchart TD
+    Host["Réseau Externe / Hôte<br/>(Port 8080)"] --> Proxy["Reverse Proxy (Nginx)<br/>(Routage & Sécurité)"]
+
+    subgraph AppNet ["Réseau Interne Isolé : app-net"]
+        Proxy -->|"Requêtes vers /"| Front["Front (Nginx)<br/>(Fichiers UI)"]
+        Proxy -->|"Requêtes vers /api"| Back["Back (Python)<br/>(Logique API)"]
+    end
+
+    Back --> Data["Volume mtg_data<br/>(JSON / SQLite)"]
+    Back --> Images["Volume mtg_images<br/>(Cache des scans)"]
 ```
 
 ---
