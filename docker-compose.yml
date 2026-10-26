@@ -76,3 +76,4 @@ volumes:
 networks:
   app-net:
     driver: overlay
+    attachable: true
