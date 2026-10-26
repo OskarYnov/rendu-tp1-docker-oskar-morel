@@ -2,27 +2,28 @@ version: '3.8'
 
 services:
   proxy:
+    image: app-proxy:latest
     build: ./proxy
     ports:
-      - "${PROXY_PORT}:80"
+      - "${PROXY_PORT:-8080}:80"
     environment:
-      - PROXY_MODE=${PROXY_MODE}
+      - PROXY_MODE=${PROXY_MODE:-normal}
     deploy:
+      replicas: 1
       resources:
         limits:
           cpus: '0.30'
           memory: 128M
-    depends_on:
-      - front
-      - back
     networks:
       - app-net
 
   front:
+    image: app-front:latest
     build: ./front
     environment:
-      - APP_ENV=${APP_ENV}
+      - APP_ENV=${APP_ENV:-prod}
     deploy:
+      replicas: 1
       resources:
         limits:
           cpus: '0.50'
@@ -31,17 +32,40 @@ services:
       - app-net
 
   back:
+    image: app-back:latest
     build: ./back
     environment:
-      - STORAGE_TYPE=${STORAGE_TYPE}
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
     volumes:
       - mtg_data:/app/data
       - mtg_images:/app/images
     deploy:
+      replicas: 1
       resources:
+        reservations: # Requis pour que l'autoscaler lise le CPU
+          cpus: '0.20'
+          memory: 128M
         limits:
           cpus: '1.0'
-          memory: 512M  
+          memory: 512M
+    networks:
+      - app-net
+
+  autoscaler:
+    image: autoscaler:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.autoscaler
+    environment:
+      - SERVICE=back
+      - STACK_NAME=demo
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - app-net
 
@@ -51,4 +75,4 @@ volumes:
 
 networks:
   app-net:
-    driver: bridge
+    driver: overlay

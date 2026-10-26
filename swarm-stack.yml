@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # Cible le proxy
+  proxy:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 128M
+
+  # Cible le front
+  front:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+  # Cible le back (avec réservations requises pour l'autoscaler)
+  back:
+    deploy:
+      replicas: 1
+      resources:
+        reservations:
+          cpus: '0.20'
+          memory: 128M
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # Service autoscaler
+  autoscaler:
+    image: autoscaler:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.autoscaler
+    environment:
+      - SERVICE=back
+      - STACK_NAME=demo
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: overlay

@@ -64,4 +64,35 @@ Ce projet consiste à concevoir une application web modulaire nommée **ManaCach
 ## 2. Orchestration, Réseaux et Volumes (docker-compose.yml)
 
 ### Variables d'Environnement (`.env`)
-L'infrastructure est paramétrable via un fichier `.env` à la racine, injecté dynamiquement au *runtime* (ex: `PROXY
+L'infrastructure est paramétrable via un fichier `.env` à la racine, injecté dynamiquement au *runtime* (ex: PROXY)
+
+
+## 3. Autoscaling et Mode Swarm (`swarm-stack.yml` & `autoscale.sh`)
+
+Pour gérer les pics de charge sur le composant critique (le service **Back-end**), un service d'**autoscaling personnalisé** a été mis en place.
+
+### Architecture de l'Autoscaler
+- **Composant autonome :** Basé sur une image légère `alpine:3.18` avec `docker-cli` et `bash`.
+- **Fonctionnement :** Interroge l'API Docker en continu via le socket local (`/var/run/docker.sock`).
+- **Seuils & Métriques :** 
+  - Récupère l'utilisation CPU globale du service `back`.
+  - **Scale UP (+1 réplica) :** Si la charge CPU dépasse **80%** (jusqu'à un maximum de 5 réplicas).
+  - **Scale DOWN (-1 réplica) :** Si la charge CPU redescend sous **10%** (jusqu'à un minimum de 1 réplica).
+
+---
+
+## 4. Guide de Démarrage et Commandes
+
+### Préréquis
+- Docker Desktop (avec le mode Swarm activé).
+- Un fichier `.env` à la racine pour les variables d'environnement.
+
+---
+
+### A. Déploiement en Mode Swarm (avec Autoscaling)
+
+En mode Swarm (`docker stack deploy`), Docker ne peut pas builder les images à la volée (`build:` non supporté par `stack deploy`). Il faut donc **builder les images en local au préalable**, puis **déployer la stack**.
+
+#### Étape 1 : Initialiser le mode Swarm (à faire une seule fois)
+```bash
+docker swarm init
