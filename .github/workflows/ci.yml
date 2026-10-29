@@ -57,6 +57,10 @@ jobs:
       - name: ⚙️ Configuration Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: 🐝 Initialisation du cluster Swarm pour le réseau Overlay
+        run: |
+          docker swarm init
+
       - name: 🔨 Build des images Docker Compose
         run: |
           docker compose build
