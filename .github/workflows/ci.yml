@@ -9,14 +9,14 @@ on:
 
 jobs:
   lint:
-    name: 🔍 Lint & Qualité du Code
+    name: Lint et Qualite du Code
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Récupération du code
+      - name: Recuperation du code
         uses: actions/checkout@v4
 
-      - name: 🐳 Lint des Dockerfiles (Hadolint)
+      - name: Lint des Dockerfiles (Hadolint)
         run: |
           docker run --rm -v "${PWD}:/mnt" -w /mnt hadolint/hadolint hadolint \
             back/dockerfile \
@@ -24,165 +24,157 @@ jobs:
             proxy/dockerfile \
             Dockerfile.autoscaler
 
-      - name: 📋 Validation des fichiers Docker Compose & Swarm
+      - name: Validation des fichiers Docker Compose et Override Swarm
         run: |
-          echo "Validation de docker-compose.yml..."
+          echo "Validation de docker-compose.yml (dev)..."
           docker compose config --quiet
-          echo "Validation de l'override swarm-stack.yml..."
+          echo "Validation de l'override swarm-stack.yml (prod)..."
           docker compose -f docker-compose.yml -f swarm-stack.yml config --quiet
 
-      - name: 📜 Lint du script shell autoscaler (ShellCheck)
+      - name: Lint du script shell autoscaler (ShellCheck)
         run: |
           shellcheck autoscale.sh
 
-      - name: 🐍 Configuration de Python
+      - name: Configuration de Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 🐍 Lint du code Python Back-End (Ruff)
+      - name: Lint du code Python Back-End (Ruff)
         run: |
           pip install ruff
           ruff check back/
 
   docker-build-and-test:
-    name: 🚀 Docker Build & Tests d'Intégration
+    name: Docker Build et Tests d Integration
     needs: lint
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Récupération du code
+      - name: Recuperation du code
         uses: actions/checkout@v4
 
-      - name: ⚙️ Configuration Docker Buildx
+      - name: Configuration Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🐝 Initialisation du cluster Swarm pour le réseau Overlay
-        run: |
-          docker swarm init
-
-      - name: 🔨 Build des images Docker Compose
+      - name: Build des images Docker Compose
         run: |
           docker compose build
 
-      - name: 🔨 Build de l'image Autoscaler
+      - name: Demarrage des services (Proxy, Front, Back)
         run: |
-          docker build -f Dockerfile.autoscaler -t autoscaler:latest .
+          docker compose up -d
 
-      - name: 📦 Démarrage des services (Proxy, Front, Back)
-        run: |
-          docker compose up -d proxy front back
-
-      - name: ⏳ Attente de la disponibilité des conteneurs
+      - name: Attente de la disponibilite des conteneurs
         run: |
           echo "Attente que le Reverse Proxy réponde sur le port 8080..."
           for i in {1..30}; do
             if curl -sSf http://localhost:8080/ > /dev/null 2>&1; then
-              echo "✅ Les conteneurs répondent après ${i}s !"
+              echo "Les conteneurs répondent après ${i}s !"
               exit 0
             fi
             echo "En attente... (${i}/30)"
             sleep 2
           done
-          echo "❌ Timeout : Le Reverse Proxy n'a pas répondu à temps."
+          echo "Timeout : Le Reverse Proxy n'a pas répondu à temps."
           exit 1
 
-      - name: 🧪 Test Front-End (Accès UI via Reverse Proxy)
+      - name: Test Front-End (Acces UI via Reverse Proxy)
         run: |
           echo "Vérification de la page d'accueil ManaCache..."
           RESPONSE=$(curl -sSf http://localhost:8080/)
-          echo "$RESPONSE" | grep -q "ManaCache" || { echo "❌ 'ManaCache' introuvable dans le front"; exit 1; }
-          echo "✅ Front-End accessible et valide !"
+          echo "$RESPONSE" | grep -q "ManaCache" || { echo "ManaCache introuvable dans le front"; exit 1; }
+          echo "Front-End accessible et valide !"
 
-      - name: 🧪 Test Back-End API (GET /api/cards via Reverse Proxy)
+      - name: Test Back-End API (GET /api/cards via Reverse Proxy)
         run: |
           echo "Vérification de la récupération des cartes..."
           CARDS=$(curl -sSf http://localhost:8080/api/cards)
           echo "Cartes reçues : $CARDS"
-          echo "$CARDS" | grep -q "Black Lotus" || { echo "❌ 'Black Lotus' introuvable dans la collection"; exit 1; }
-          echo "✅ Endpoint GET /api/cards opérationnel !"
+          echo "$CARDS" | grep -q "Black Lotus" || { echo "Black Lotus introuvable dans la collection"; exit 1; }
+          echo "Endpoint GET /api/cards opérationnel !"
 
-      - name: 🧪 Test Back-End API (POST /api/cards - Ajout et persistance)
+      - name: Test Back-End API (POST /api/cards - Ajout et persistance)
         run: |
           echo "Ajout d'une nouvelle carte..."
           POST_RES=$(curl -sSf -X POST http://localhost:8080/api/cards \
             -H "Content-Type: application/json" \
             -d '{"name": "Mox Jet", "edition": "Alpha"}')
           echo "Réponse POST : $POST_RES"
-          echo "$POST_RES" | grep -q "success" || { echo "❌ Échec de la création de la carte"; exit 1; }
+          echo "$POST_RES" | grep -q "success" || { echo "Échec de la création de la carte"; exit 1; }
 
           echo "Vérification de la persistance dans la collection..."
           UPDATED_CARDS=$(curl -sSf http://localhost:8080/api/cards)
           echo "Nouvelle collection : $UPDATED_CARDS"
-          echo "$UPDATED_CARDS" | grep -q "Mox Jet" || { echo "❌ 'Mox Jet' non persisté"; exit 1; }
-          echo "✅ Endpoint POST /api/cards et persistance validés !"
+          echo "$UPDATED_CARDS" | grep -q "Mox Jet" || { echo "Mox Jet non persisté"; exit 1; }
+          echo "Endpoint POST /api/cards et persistance validés !"
 
-      - name: 🧪 Test Route 404
+      - name: Test Route 404
         run: |
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/unknown-endpoint)
           if [ "$HTTP_CODE" -eq 404 ]; then
-            echo "✅ Erreur 404 correctement retournée pour les routes inconnues."
+            echo "Erreur 404 correctement retournée pour les routes inconnues."
           else
-            echo "❌ Code HTTP attendu: 404, reçu: $HTTP_CODE"
+            echo "Code HTTP attendu: 404, reçu: $HTTP_CODE"
             exit 1
           fi
 
-      - name: 📜 Affichage des logs en cas d'erreur
+      - name: Affichage des logs en cas d erreur
         if: always()
         run: |
           docker compose logs
 
-      - name: 🧹 Arrêt et nettoyage des conteneurs
+      - name: Arret et nettoyage des conteneurs
         if: always()
         run: |
           docker compose down -v
 
   swarm-deployment-test:
-    name: 🌐 Test Déploiement Docker Swarm & Autoscaler
+    name: Test Deploiement Docker Swarm et Autoscaler
     needs: docker-build-and-test
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Récupération du code
+      - name: Recuperation du code
         uses: actions/checkout@v4
 
-      - name: ⚙️ Configuration Docker Buildx
+      - name: Configuration Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔨 Build des images pour Swarm
+      - name: Build des images pour Swarm et Autoscaler
         run: |
           docker compose build
+          docker build -f Dockerfile.autoscaler -t autoscaler:latest .
 
-      - name: 🐝 Initialisation du cluster Swarm
+      - name: Initialisation du cluster Swarm
         run: |
           docker swarm init
 
-      - name: 🚀 Déploiement de la stack Swarm
+      - name: Deploiement de la stack Swarm (Base + Override)
         run: |
-          docker stack deploy -c docker-compose.yml demo
+          docker stack deploy -c docker-compose.yml -c swarm-stack.yml demo
 
-      - name: ⏳ Attente de la convergence des services Swarm
+      - name: Attente de la convergence des services Swarm
         run: |
           echo "Attente du démarrage des services Swarm..."
           sleep 15
           docker stack services demo
           docker service ps demo_back demo_front demo_proxy demo_autoscaler
 
-      - name: 🧪 Test d'accès HTTP sur la stack Swarm
+      - name: Test d acces HTTP sur la stack Swarm
         run: |
           echo "Test de l'accès au Reverse Proxy sur le port 8080..."
           for i in {1..20}; do
             if curl -sSf http://localhost:8080/api/cards > /dev/null 2>&1; then
-              echo "✅ Stack Swarm accessible via le port 8080 !"
+              echo "Stack Swarm accessible via le port 8080 !"
               exit 0
             fi
             sleep 2
           done
-          echo "⚠️ Le service Swarm met du temps à converger."
+          echo "Le service Swarm met du temps à converger."
 
-      - name: 🧹 Nettoyage Swarm
+      - name: Nettoyage Swarm
         if: always()
         run: |
           docker stack rm demo || true
           docker swarm leave --force || true
-

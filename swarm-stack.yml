@@ -1,7 +1,7 @@
-version: '3.8'
+# Override Swarm pour le déploiement en cluster de production
+# Usage: docker stack deploy -c docker-compose.yml -c swarm-stack.yml demo
 
 services:
-  # Cible le proxy
   proxy:
     deploy:
       replicas: 1
@@ -10,7 +10,6 @@ services:
           cpus: '0.30'
           memory: 128M
 
-  # Cible le front
   front:
     deploy:
       replicas: 1
@@ -19,19 +18,18 @@ services:
           cpus: '0.50'
           memory: 256M
 
-  # Cible le back (avec réservations requises pour l'autoscaler)
   back:
     deploy:
       replicas: 1
       resources:
-        reservations:
+        reservations: # Requis pour que l'autoscaler analyse la charge CPU
           cpus: '0.20'
           memory: 128M
         limits:
           cpus: '1.0'
           memory: 512M
 
-  # Service autoscaler
+  # Service d'autoscaling autonome (déployé uniquement en mode Swarm)
   autoscaler:
     image: autoscaler:latest
     build:
@@ -55,3 +53,4 @@ services:
 networks:
   app-net:
     driver: overlay
+    attachable: true
